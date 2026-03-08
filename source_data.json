@@ -1,0 +1,16 @@
+[
+  {
+    "user_identifier": "A9901",
+    "full_name": "Kelli Nordfelt",
+    "email_addr": "kelli@example.com",
+    "signup_date": "2026-03-01",
+    "tier": "Premium"
+  },
+  {
+    "id": "B1102",
+    "name": "Sami Meidu",
+    "contact": "sami@planet.com",
+    "created_at": "08-03-2026",
+    "status": "Active"
+  }
+]
