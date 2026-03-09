@@ -1,210 +1,161 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "data-mapping-intent/v1",
-  "title": "Data Integration Intent Object",
-  "description": "Defines the anatomy of an incoming data source as it enters the staging environment. Captures both structural metadata and declared intent, enabling AI agents to propose ERD relationships and proactively surface conflicts before pipeline activation.",
-  "version": "1.0.0",
-  "intent": {
-    "description": "Architect-declared or AI-inferred purpose of this data source",
+  "$id": "intent-orchestration/v2",
+  "title": "Intent Orchestration Object",
+  "description": "Defines the AI-reasoned pipeline plan generated from a silent source scan and a declared intent goal. The human is the approver of a pre-reasoned data landscape, not an operator of individual mappings.",
+  "version": "2.0.0",
+  "paradigm": "Automated Data Orchestration",
+  "humanRole": "approver",
+
+  "silentScan": {
+    "description": "AI reads all available source connections and raw data simultaneously before the user takes any action",
     "type": "object",
     "properties": {
-      "declaredGoal": {
-        "type": "string",
-        "description": "What the architect intends this data to do in the system",
-        "example": "Extend unified customer profile with supply chain order history"
-      },
-      "inferredByAI": {
-        "type": "boolean",
-        "description": "Whether the intent was inferred by AI (true) or declared by user (false)"
-      },
-      "confidenceScore": {
-        "type": "number",
-        "minimum": 0,
-        "maximum": 1,
-        "description": "AI confidence in the inferred intent (1.0 = certain, 0.0 = unknown)"
-      },
-      "domainContext": {
-        "type": "string",
-        "enum": ["operations", "supply_chain", "finance", "customer_profile", "identity", "behavioral", "unknown"],
-        "description": "Business domain this data belongs to"
-      },
-      "targetEntity": {
-        "type": "string",
-        "description": "The primary entity this data describes",
-        "example": "customer"
-      }
-    },
-    "required": ["declaredGoal", "inferredByAI", "domainContext", "targetEntity"]
-  },
-  "source": {
-    "description": "Metadata about the incoming data source",
-    "type": "object",
-    "properties": {
-      "connectionId": {
-        "type": "string",
-        "description": "Unique identifier for the source connection"
-      },
-      "connectionType": {
-        "type": "string",
-        "enum": ["batch", "streaming", "api", "file_upload", "database"],
-        "description": "How data enters the pipeline"
-      },
-      "format": {
-        "type": "string",
-        "enum": ["json", "csv", "parquet", "avro", "xml"],
-        "description": "Raw data format"
-      },
-      "samplePayload": {
+      "sourcesScanned": {
         "type": "array",
-        "description": "Representative sample of raw incoming records",
-        "items": { "type": "object" }
-      },
-      "fieldCount": {
-        "type": "integer",
-        "description": "Total number of fields in the raw schema"
-      },
-      "recordVolume": {
-        "type": "string",
-        "enum": ["low", "medium", "high", "bulk"],
-        "description": "Estimated data volume tier"
-      }
-    },
-    "required": ["connectionId", "connectionType", "format"]
-  },
-  "structuralAnalysis": {
-    "description": "AI-generated structural assessment of field compatibility against existing schemas",
-    "type": "object",
-    "properties": {
-      "identityFields": {
-        "type": "array",
-        "description": "Fields the AI has identified as likely identity or join keys",
+        "description": "All active and staged connections evaluated during the scan",
         "items": {
           "type": "object",
           "properties": {
-            "sourceField": { "type": "string" },
-            "inferredType": { "type": "string", "enum": ["primary_key", "foreign_key", "email", "phone", "custom_id"] },
-            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            "connectionId":   { "type": "string" },
+            "connectionType": { "type": "string", "enum": ["batch", "streaming", "api", "file_upload", "database"] },
+            "domain":         { "type": "string" },
+            "fieldCount":     { "type": "integer" },
+            "recordDepth":    { "type": "string", "description": "How far back this source's data goes. Example: 24 months" },
+            "identityFields": { "type": "array", "items": { "type": "string" }, "description": "Fields identified as likely identity or join keys" },
+            "volatilityScore":{ "type": "number", "minimum": 0, "maximum": 1, "description": "Historical field change frequency observed by AI" }
           }
         }
       },
-      "mappingCandidates": {
+      "scanCompletedAt":  { "type": "string", "format": "date-time" },
+      "totalFieldsRead":  { "type": "integer" },
+      "conflictsFound":   { "type": "integer" },
+      "identityCollisions": {
         "type": "array",
-        "description": "AI-proposed field-to-target mappings at batch level",
+        "description": "Identity fields that collide across sources and require AI resolution",
         "items": {
           "type": "object",
           "properties": {
-            "sourceField": { "type": "string" },
-            "targetField": { "type": "string" },
-            "targetSchema": { "type": "string" },
-            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-            "requiresTransform": { "type": "boolean" },
-            "transformHint": { "type": "string", "description": "e.g. date format normalization, string to enum coercion" }
-          }
-        }
-      },
-      "conflicts": {
-        "type": "array",
-        "description": "Structural conflicts detected between source and existing graph",
-        "items": {
-          "type": "object",
-          "properties": {
-            "severity": { "type": "string", "enum": ["critical", "warning", "info"] },
-            "conflictType": { "type": "string", "enum": ["type_mismatch", "naming_collision", "identity_overlap", "cardinality_violation", "null_rate"] },
-            "sourceField": { "type": "string" },
-            "conflictingSchema": { "type": "string" },
-            "historicalOccurrences": { "type": "integer", "description": "How many times this conflict has appeared in prior dataflows" },
-            "suggestedResolution": { "type": "string" }
+            "field":          { "type": "string" },
+            "collidingSources": { "type": "array", "items": { "type": "string" } },
+            "resolutionStrategy": { "type": "string", "enum": ["namespace_merge", "priority_source", "derived_key", "requires_review"] },
+            "autoResolvable": { "type": "boolean" }
           }
         }
       }
     }
   },
-  "temporalProfile": {
-    "description": "Temporal characteristics — surfaced as insights for architect review, not AI decisions",
+
+  "intentDeclaration": {
+    "description": "The goal the architect provides. Used by AI to reason about which flows to construct and what the resulting profile will look like.",
     "type": "object",
     "properties": {
-      "ingestCadence": {
+      "goalStatement": {
         "type": "string",
-        "enum": ["real_time", "hourly", "daily", "weekly", "ad_hoc"]
+        "description": "Plain language goal from the architect",
+        "example": "Build longitudinal health tracking across all patient touchpoints for continuity of care analysis"
       },
-      "dataFreshness": {
-        "type": "string",
-        "description": "Expected lag between event occurrence and data availability"
-      },
-      "historicalDepth": {
-        "type": "string",
-        "description": "How far back this source's data goes",
-        "example": "18 months"
-      },
-      "volatilityScore": {
-        "type": "number",
-        "minimum": 0,
-        "maximum": 1,
-        "description": "How frequently fields in this source type have changed historically (AI-observed)"
-      },
-      "architectControlRequired": {
-        "type": "boolean",
-        "default": true,
-        "description": "Temporal decisions always require architect review — AI informs, does not decide"
+      "targetEntity":  { "type": "string", "example": "patient" },
+      "domain":        { "type": "string", "enum": ["clinical", "operations", "supply_chain", "finance", "customer_profile", "identity", "behavioral"] },
+      "successCriteria": {
+        "type": "array",
+        "description": "What a high-quality outcome looks like for this intent",
+        "items": { "type": "string" },
+        "example": ["Complete longitudinal record per patient", "No identity fragmentation across sources", "Temporal continuity across all event types"]
       }
-    }
+    },
+    "required": ["goalStatement", "targetEntity", "domain"]
   },
-  "proposedERD": {
-    "description": "AI-generated integration architecture proposal",
+
+  "orchestrationPlan": {
+    "description": "AI-constructed pipeline plan based on silent scan results and declared intent. Presented to the architect for approval, not construction.",
     "type": "object",
     "properties": {
-      "nodes": {
+
+      "recommendedFlows": {
         "type": "array",
+        "description": "Ordered list of data flows the AI recommends activating to achieve the stated intent",
         "items": {
           "type": "object",
           "properties": {
-            "id": { "type": "string" },
-            "label": { "type": "string" },
-            "schemaType": { "type": "string" },
-            "isNew": { "type": "boolean" }
+            "flowId":         { "type": "string" },
+            "sourceId":       { "type": "string" },
+            "targetSchema":   { "type": "string" },
+            "priority":       { "type": "integer", "description": "Activation order recommended by AI" },
+            "rationale":      { "type": "string", "description": "Why this flow is necessary for the stated intent" },
+            "profileContribution": { "type": "string", "description": "What this flow adds to the Unified Profile" },
+            "autoResolved":   { "type": "boolean", "description": "Whether AI resolved all conflicts in this flow without human input" },
+            "requiresApproval": { "type": "boolean" }
           }
         }
       },
-      "edges": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "from": { "type": "string" },
-            "to": { "type": "string" },
-            "joinKey": { "type": "string" },
-            "relationshipType": { "type": "string", "enum": ["one_to_one", "one_to_many", "many_to_many"] },
-            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-            "riskLevel": { "type": "string", "enum": ["low", "medium", "high"] }
+
+      "profileIntegrityScore": {
+        "type": "object",
+        "description": "Predicted quality of the Unified Profile if all recommended flows are approved and activated",
+        "properties": {
+          "overallScore":         { "type": "number", "minimum": 0, "maximum": 100 },
+          "identityCompleteness": { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of records with a resolved, non-fragmented identity" },
+          "temporalCoverage":     { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of the intended time range with sufficient data density" },
+          "fieldCoverage":        { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of target schema fields that will be populated" },
+          "conflictResolutionRate": { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of detected conflicts resolved automatically" },
+          "scoreJustification":   { "type": "string", "description": "Plain language summary of what is driving the score up or down" }
+        }
+      },
+
+      "predictedUnifiedProfile": {
+        "description": "A visual preview of the merged record structure before any ingestion occurs",
+        "type": "object",
+        "properties": {
+          "resolvedIdentityKey": { "type": "string", "description": "The identity key the AI will use after resolving collisions" },
+          "mergedFieldCount":    { "type": "integer" },
+          "fragmentationRisk":   { "type": "string", "enum": ["none", "low", "medium", "high"] },
+          "sampleMergedRecord":  { "type": "object", "description": "Representative preview of what a resolved profile record will look like" },
+          "collisionResolutions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field":      { "type": "string" },
+                "fromSources": { "type": "array", "items": { "type": "string" } },
+                "resolution": { "type": "string" },
+                "strategy":   { "type": "string", "enum": ["namespace_merge", "priority_source", "derived_key"] }
+              }
+            }
           }
         }
       },
+
       "approvalStatus": {
         "type": "string",
-        "enum": ["pending_review", "approved", "modified", "rejected"],
-        "description": "Architect approval state — batch level, not field-by-field"
+        "enum": ["awaiting_review", "approved", "modified", "rejected"],
+        "description": "Architect approval state for the full orchestration plan. Batch approval. Not per-field."
+      },
+
+      "exceptionItems": {
+        "type": "array",
+        "description": "The only items surfaced for human review. AI handles everything else automatically.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "severity":    { "type": "string", "enum": ["critical", "warning"] },
+            "type":        { "type": "string", "enum": ["identity_ambiguity", "schema_gap", "temporal_discontinuity", "cardinality_violation"] },
+            "description": { "type": "string" },
+            "aiSuggestion": { "type": "string" },
+            "requiresArchitectDecision": { "type": "boolean", "default": true }
+          }
+        }
       }
     }
   },
-  "etlEnhancements": {
-    "description": "AI-surfaced ETL opportunities to enrich Unified Profile and downstream destinations",
-    "type": "array",
-    "items": {
-      "type": "object",
-      "properties": {
-        "type": { "type": "string", "enum": ["enrichment", "deduplication", "normalization", "derived_field", "profile_extension"] },
-        "description": { "type": "string" },
-        "impactedDestinations": { "type": "array", "items": { "type": "string" } },
-        "effort": { "type": "string", "enum": ["low", "medium", "high"] },
-        "priority": { "type": "string", "enum": ["recommended", "optional", "deferred"] }
-      }
-    }
-  },
+
   "metadata": {
-    "createdAt": { "type": "string", "format": "date-time" },
-    "createdBy": { "type": "string" },
-    "environment": { "type": "string", "enum": ["staging", "production"] },
-    "sprintContext": "Data Mapping with Intent — POC Day 1",
-    "designLead": "Kelli Nordfelt"
+    "createdAt":    { "type": "string", "format": "date-time" },
+    "createdBy":    { "type": "string" },
+    "environment":  { "type": "string", "enum": ["staging", "production"] },
+    "version":      "2.0.0",
+    "sprintContext": "Data Mapping with Intent — POC Day 1 v2",
+    "designLead":   "Kelli Nordfelt",
+    "paradigm":     "Automated Data Orchestration. Human as approver, not operator."
   }
 }
