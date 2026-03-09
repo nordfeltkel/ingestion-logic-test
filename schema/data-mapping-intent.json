@@ -6,24 +6,25 @@
   "version": "2.0.0",
   "paradigm": "Automated Data Orchestration",
   "humanRole": "approver",
+  "platform": "Adobe Experience Platform",
 
   "silentScan": {
-    "description": "AI reads all available source connections and raw data simultaneously before the user takes any action",
+    "description": "AI reads all available AEP source connections and raw data simultaneously before the user takes any action",
     "type": "object",
     "properties": {
       "sourcesScanned": {
         "type": "array",
-        "description": "All active and staged connections evaluated during the scan",
+        "description": "All active and staged AEP source connections evaluated during the scan",
         "items": {
           "type": "object",
           "properties": {
-            "connectionId":   { "type": "string" },
-            "connectionType": { "type": "string", "enum": ["batch", "streaming", "api", "file_upload", "database"] },
-            "domain":         { "type": "string" },
-            "fieldCount":     { "type": "integer" },
-            "recordDepth":    { "type": "string", "description": "How far back this source's data goes. Example: 24 months" },
-            "identityFields": { "type": "array", "items": { "type": "string" }, "description": "Fields identified as likely identity or join keys" },
-            "volatilityScore":{ "type": "number", "minimum": 0, "maximum": 1, "description": "Historical field change frequency observed by AI" }
+            "connectionId":    { "type": "string" },
+            "connectionType":  { "type": "string", "enum": ["batch", "streaming", "api", "file_upload", "database"] },
+            "domain":          { "type": "string" },
+            "fieldCount":      { "type": "integer" },
+            "recordDepth":     { "type": "string", "description": "How far back this source's data goes. Example: 24 months" },
+            "identityFields":  { "type": "array", "items": { "type": "string" }, "description": "Fields identified as likely identity or join keys" },
+            "volatilityScore": { "type": "number", "minimum": 0, "maximum": 1, "description": "Historical field change frequency observed by AI" }
           }
         }
       },
@@ -36,10 +37,10 @@
         "items": {
           "type": "object",
           "properties": {
-            "field":          { "type": "string" },
-            "collidingSources": { "type": "array", "items": { "type": "string" } },
+            "field":              { "type": "string" },
+            "collidingSources":   { "type": "array", "items": { "type": "string" } },
             "resolutionStrategy": { "type": "string", "enum": ["namespace_merge", "priority_source", "derived_key", "requires_review"] },
-            "autoResolvable": { "type": "boolean" }
+            "autoResolvable":     { "type": "boolean" }
           }
         }
       }
@@ -47,79 +48,84 @@
   },
 
   "intentDeclaration": {
-    "description": "The goal the architect provides. Used by AI to reason about which flows to construct and what the resulting profile will look like.",
+    "description": "The goal the architect provides. Used by AI to reason about which AEP flows to construct and what the resulting Unified Profile will look like.",
     "type": "object",
     "properties": {
       "goalStatement": {
         "type": "string",
-        "description": "Plain language goal from the architect",
-        "example": "Build longitudinal health tracking across all patient touchpoints for continuity of care analysis"
+        "description": "Plain language goal from the data architect",
+        "example": "Build a longitudinal customer journey view across all active sources to support downstream segmentation and activation"
       },
-      "targetEntity":  { "type": "string", "example": "patient" },
-      "domain":        { "type": "string", "enum": ["clinical", "operations", "supply_chain", "finance", "customer_profile", "identity", "behavioral"] },
+      "targetEntity":  { "type": "string", "example": "customer" },
+      "domain":        { "type": "string", "enum": ["operations", "supply_chain", "finance", "customer_profile", "identity", "behavioral", "ecommerce"] },
       "successCriteria": {
         "type": "array",
-        "description": "What a high-quality outcome looks like for this intent",
+        "description": "What a high-quality Unified Profile outcome looks like for this intent",
         "items": { "type": "string" },
-        "example": ["Complete longitudinal record per patient", "No identity fragmentation across sources", "Temporal continuity across all event types"]
+        "example": [
+          "Complete longitudinal record per customer identity",
+          "No identity fragmentation across source connections",
+          "Temporal continuity across all experience event types",
+          "All target XDM schema fields populated above threshold"
+        ]
       }
     },
     "required": ["goalStatement", "targetEntity", "domain"]
   },
 
   "orchestrationPlan": {
-    "description": "AI-constructed pipeline plan based on silent scan results and declared intent. Presented to the architect for approval, not construction.",
+    "description": "AI-constructed AEP pipeline plan based on silent scan results and declared intent. Presented to the architect for approval, not construction.",
     "type": "object",
     "properties": {
 
       "recommendedFlows": {
         "type": "array",
-        "description": "Ordered list of data flows the AI recommends activating to achieve the stated intent",
+        "description": "Ordered list of AEP dataflows the AI recommends activating to achieve the stated intent",
         "items": {
           "type": "object",
           "properties": {
-            "flowId":         { "type": "string" },
-            "sourceId":       { "type": "string" },
-            "targetSchema":   { "type": "string" },
-            "priority":       { "type": "integer", "description": "Activation order recommended by AI" },
-            "rationale":      { "type": "string", "description": "Why this flow is necessary for the stated intent" },
-            "profileContribution": { "type": "string", "description": "What this flow adds to the Unified Profile" },
-            "autoResolved":   { "type": "boolean", "description": "Whether AI resolved all conflicts in this flow without human input" },
-            "requiresApproval": { "type": "boolean" }
+            "flowId":              { "type": "string" },
+            "sourceId":            { "type": "string" },
+            "targetSchema":        { "type": "string", "description": "XDM target schema for this flow" },
+            "priority":            { "type": "integer", "description": "Activation order recommended by AI" },
+            "rationale":           { "type": "string", "description": "Why this flow is necessary for the stated intent" },
+            "profileContribution": { "type": "string", "description": "What this flow adds to the AEP Unified Profile" },
+            "autoResolved":        { "type": "boolean", "description": "Whether AI resolved all conflicts in this flow without human input" },
+            "requiresApproval":    { "type": "boolean" }
           }
         }
       },
 
       "profileIntegrityScore": {
         "type": "object",
-        "description": "Predicted quality of the Unified Profile if all recommended flows are approved and activated",
+        "description": "Predicted quality of the AEP Unified Profile if all recommended flows are approved and activated",
         "properties": {
-          "overallScore":         { "type": "number", "minimum": 0, "maximum": 100 },
-          "identityCompleteness": { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of records with a resolved, non-fragmented identity" },
-          "temporalCoverage":     { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of the intended time range with sufficient data density" },
-          "fieldCoverage":        { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of target schema fields that will be populated" },
+          "overallScore":           { "type": "number", "minimum": 0, "maximum": 100 },
+          "identityCompleteness":   { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of records with a resolved, non-fragmented identity in the Identity Graph" },
+          "temporalCoverage":       { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of the intended time range with sufficient ExperienceEvent density" },
+          "fieldCoverage":          { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of target XDM schema fields that will be populated" },
           "conflictResolutionRate": { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of detected conflicts resolved automatically" },
-          "scoreJustification":   { "type": "string", "description": "Plain language summary of what is driving the score up or down" }
+          "scoreJustification":     { "type": "string", "description": "Plain language summary of what is driving the score up or down" }
         }
       },
 
       "predictedUnifiedProfile": {
-        "description": "A visual preview of the merged record structure before any ingestion occurs",
+        "description": "A visual preview of the AEP merged record structure before any ingestion occurs",
         "type": "object",
         "properties": {
-          "resolvedIdentityKey": { "type": "string", "description": "The identity key the AI will use after resolving collisions" },
-          "mergedFieldCount":    { "type": "integer" },
-          "fragmentationRisk":   { "type": "string", "enum": ["none", "low", "medium", "high"] },
-          "sampleMergedRecord":  { "type": "object", "description": "Representative preview of what a resolved profile record will look like" },
+          "resolvedIdentityKey":  { "type": "string", "description": "The XDM identity key the AI will use after resolving namespace collisions" },
+          "mergedFieldCount":     { "type": "integer" },
+          "fragmentationRisk":    { "type": "string", "enum": ["none", "low", "medium", "high"] },
+          "sampleMergedRecord":   { "type": "object", "description": "Representative preview of what a resolved XDM profile record will look like" },
           "collisionResolutions": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "field":      { "type": "string" },
+                "field":       { "type": "string" },
                 "fromSources": { "type": "array", "items": { "type": "string" } },
-                "resolution": { "type": "string" },
-                "strategy":   { "type": "string", "enum": ["namespace_merge", "priority_source", "derived_key"] }
+                "resolution":  { "type": "string" },
+                "strategy":    { "type": "string", "enum": ["namespace_merge", "priority_source", "derived_key"] }
               }
             }
           }
@@ -138,11 +144,11 @@
         "items": {
           "type": "object",
           "properties": {
-            "severity":    { "type": "string", "enum": ["critical", "warning"] },
-            "type":        { "type": "string", "enum": ["identity_ambiguity", "schema_gap", "temporal_discontinuity", "cardinality_violation"] },
-            "description": { "type": "string" },
-            "aiSuggestion": { "type": "string" },
-            "requiresArchitectDecision": { "type": "boolean", "default": true }
+            "severity":                   { "type": "string", "enum": ["critical", "warning"] },
+            "type":                       { "type": "string", "enum": ["identity_ambiguity", "schema_gap", "temporal_discontinuity", "cardinality_violation"] },
+            "description":                { "type": "string" },
+            "aiSuggestion":               { "type": "string" },
+            "requiresArchitectDecision":  { "type": "boolean", "default": true }
           }
         }
       }
@@ -154,7 +160,8 @@
     "createdBy":    { "type": "string" },
     "environment":  { "type": "string", "enum": ["staging", "production"] },
     "version":      "2.0.0",
-    "sprintContext": "Data Mapping with Intent — POC Day 1 v2",
+    "platform":     "Adobe Experience Platform",
+    "sprintContext": "Data Mapping with Intent — POC Day 1 v3",
     "designLead":   "Kelli Nordfelt",
     "paradigm":     "Automated Data Orchestration. Human as approver, not operator."
   }
