@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "data-mapping-intent/v1",
+  "title": "Data Integration Intent Object",
+  "description": "Defines the anatomy of an incoming data source as it enters the staging environment. Captures both structural metadata and declared intent, enabling AI agents to propose ERD relationships and proactively surface conflicts before pipeline activation.",
+  "version": "1.0.0",
+  "intent": {
+    "description": "Architect-declared or AI-inferred purpose of this data source",
+    "type": "object",
+    "properties": {
+      "declaredGoal": {
+        "type": "string",
+        "description": "What the architect intends this data to do in the system",
+        "example": "Extend unified customer profile with supply chain order history"
+      },
+      "inferredByAI": {
+        "type": "boolean",
+        "description": "Whether the intent was inferred by AI (true) or declared by user (false)"
+      },
+      "confidenceScore": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "AI confidence in the inferred intent (1.0 = certain, 0.0 = unknown)"
+      },
+      "domainContext": {
+        "type": "string",
+        "enum": ["operations", "supply_chain", "finance", "customer_profile", "identity", "behavioral", "unknown"],
+        "description": "Business domain this data belongs to"
+      },
+      "targetEntity": {
+        "type": "string",
+        "description": "The primary entity this data describes",
+        "example": "customer"
+      }
+    },
+    "required": ["declaredGoal", "inferredByAI", "domainContext", "targetEntity"]
+  },
+  "source": {
+    "description": "Metadata about the incoming data source",
+    "type": "object",
+    "properties": {
+      "connectionId": {
+        "type": "string",
+        "description": "Unique identifier for the source connection"
+      },
+      "connectionType": {
+        "type": "string",
+        "enum": ["batch", "streaming", "api", "file_upload", "database"],
+        "description": "How data enters the pipeline"
+      },
+      "format": {
+        "type": "string",
+        "enum": ["json", "csv", "parquet", "avro", "xml"],
+        "description": "Raw data format"
+      },
+      "samplePayload": {
+        "type": "array",
+        "description": "Representative sample of raw incoming records",
+        "items": { "type": "object" }
+      },
+      "fieldCount": {
+        "type": "integer",
+        "description": "Total number of fields in the raw schema"
+      },
+      "recordVolume": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "bulk"],
+        "description": "Estimated data volume tier"
+      }
+    },
+    "required": ["connectionId", "connectionType", "format"]
+  },
+  "structuralAnalysis": {
+    "description": "AI-generated structural assessment of field compatibility against existing schemas",
+    "type": "object",
+    "properties": {
+      "identityFields": {
+        "type": "array",
+        "description": "Fields the AI has identified as likely identity or join keys",
+        "items": {
+          "type": "object",
+          "properties": {
+            "sourceField": { "type": "string" },
+            "inferredType": { "type": "string", "enum": ["primary_key", "foreign_key", "email", "phone", "custom_id"] },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      },
+      "mappingCandidates": {
+        "type": "array",
+        "description": "AI-proposed field-to-target mappings at batch level",
+        "items": {
+          "type": "object",
+          "properties": {
+            "sourceField": { "type": "string" },
+            "targetField": { "type": "string" },
+            "targetSchema": { "type": "string" },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "requiresTransform": { "type": "boolean" },
+            "transformHint": { "type": "string", "description": "e.g. date format normalization, string to enum coercion" }
+          }
+        }
+      },
+      "conflicts": {
+        "type": "array",
+        "description": "Structural conflicts detected between source and existing graph",
+        "items": {
+          "type": "object",
+          "properties": {
+            "severity": { "type": "string", "enum": ["critical", "warning", "info"] },
+            "conflictType": { "type": "string", "enum": ["type_mismatch", "naming_collision", "identity_overlap", "cardinality_violation", "null_rate"] },
+            "sourceField": { "type": "string" },
+            "conflictingSchema": { "type": "string" },
+            "historicalOccurrences": { "type": "integer", "description": "How many times this conflict has appeared in prior dataflows" },
+            "suggestedResolution": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "temporalProfile": {
+    "description": "Temporal characteristics — surfaced as insights for architect review, not AI decisions",
+    "type": "object",
+    "properties": {
+      "ingestCadence": {
+        "type": "string",
+        "enum": ["real_time", "hourly", "daily", "weekly", "ad_hoc"]
+      },
+      "dataFreshness": {
+        "type": "string",
+        "description": "Expected lag between event occurrence and data availability"
+      },
+      "historicalDepth": {
+        "type": "string",
+        "description": "How far back this source's data goes",
+        "example": "18 months"
+      },
+      "volatilityScore": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "description": "How frequently fields in this source type have changed historically (AI-observed)"
+      },
+      "architectControlRequired": {
+        "type": "boolean",
+        "default": true,
+        "description": "Temporal decisions always require architect review — AI informs, does not decide"
+      }
+    }
+  },
+  "proposedERD": {
+    "description": "AI-generated integration architecture proposal",
+    "type": "object",
+    "properties": {
+      "nodes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "label": { "type": "string" },
+            "schemaType": { "type": "string" },
+            "isNew": { "type": "boolean" }
+          }
+        }
+      },
+      "edges": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "from": { "type": "string" },
+            "to": { "type": "string" },
+            "joinKey": { "type": "string" },
+            "relationshipType": { "type": "string", "enum": ["one_to_one", "one_to_many", "many_to_many"] },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "riskLevel": { "type": "string", "enum": ["low", "medium", "high"] }
+          }
+        }
+      },
+      "approvalStatus": {
+        "type": "string",
+        "enum": ["pending_review", "approved", "modified", "rejected"],
+        "description": "Architect approval state — batch level, not field-by-field"
+      }
+    }
+  },
+  "etlEnhancements": {
+    "description": "AI-surfaced ETL opportunities to enrich Unified Profile and downstream destinations",
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["enrichment", "deduplication", "normalization", "derived_field", "profile_extension"] },
+        "description": { "type": "string" },
+        "impactedDestinations": { "type": "array", "items": { "type": "string" } },
+        "effort": { "type": "string", "enum": ["low", "medium", "high"] },
+        "priority": { "type": "string", "enum": ["recommended", "optional", "deferred"] }
+      }
+    }
+  },
+  "metadata": {
+    "createdAt": { "type": "string", "format": "date-time" },
+    "createdBy": { "type": "string" },
+    "environment": { "type": "string", "enum": ["staging", "production"] },
+    "sprintContext": "Data Mapping with Intent — POC Day 1",
+    "designLead": "Kelli Nordfelt"
+  }
+}
