@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intent-orchestration/lineage/v1",
+  "title": "AEP Lineage Orchestration Plan",
+  "description": "Defines the AI-proposed Source > Connection > Dataflow deployment plan. The AI automates the construction of AEP lineage based on declared intent. The architect approves the plan, not the individual steps.",
+  "version": "1.0.0",
+  "platform": "Adobe Experience Platform",
+  "paradigm": "Automated Data Orchestration",
+  "humanRole": "approver",
+
+  "lineageHierarchy": {
+    "description": "The three-tier AEP architecture this plan operates within",
+    "source": {
+      "definition": "The physical origin of the data. A CRM, database, file store, or API endpoint.",
+      "aiRole": "Global Scan — AI identifies all available sources before a connection is touched"
+    },
+    "connection": {
+      "definition": "The authenticated bridge between the source and AEP. Account or API credentials.",
+      "aiRole": "Credential Mapping — AI identifies which existing connections can be reused or flags that a new one is required"
+    },
+    "dataflow": {
+      "definition": "The specific schedule and field mapping for a dataset flowing into AEP.",
+      "aiRole": "Predictive Flow Construction — AI proposes the exact number of dataflows needed to fulfill the stated intent"
+    }
+  },
+
+  "proposedLineage": {
+    "description": "The full Source > Connection > Dataflow tree proposed by the AI to fulfill the declared intent",
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "object",
+          "properties": {
+            "id":     { "type": "string" },
+            "label":  { "type": "string", "description": "Human-readable source name" },
+            "type":   { "type": "string", "enum": ["crm", "database", "file", "api", "streaming", "cloud_storage"] },
+            "status": { "type": "string", "enum": ["active", "staged", "new_required"] }
+          }
+        },
+        "connection": {
+          "type": "object",
+          "properties": {
+            "id":        { "type": "string" },
+            "label":     { "type": "string" },
+            "reused":    { "type": "boolean", "description": "Whether AI identified an existing connection that satisfies this source" },
+            "authType":  { "type": "string", "enum": ["api_key", "oauth", "service_account", "basic"] },
+            "status":    { "type": "string", "enum": ["active", "new_required", "needs_validation"] }
+          }
+        },
+        "dataflows": {
+          "type": "array",
+          "description": "One or more dataflows the AI proposes to construct from this connection",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id":               { "type": "string" },
+              "label":            { "type": "string" },
+              "targetDataset":    { "type": "string" },
+              "targetSchema":     { "type": "string", "description": "XDM target schema" },
+              "schedule":         { "type": "string", "enum": ["streaming", "hourly", "daily", "weekly", "on_demand"] },
+              "profileContribution": { "type": "string" },
+              "reasoning":        { "type": "string", "description": "Why this dataflow is required for the stated intent" },
+              "transformsRequired": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field":      { "type": "string" },
+                    "issue":      { "type": "string" },
+                    "resolution": { "type": "string" }
+                  }
+                }
+              },
+              "autoResolved":     { "type": "boolean" },
+              "requiresApproval": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "outcomeSimulation": {
+    "description": "Preview of the merged Unified Profile record state after all proposed dataflows are activated. No data has moved yet.",
+    "type": "object",
+    "properties": {
+      "resolvedIdentityKey":  { "type": "string" },
+      "mergedFieldCount":     { "type": "integer" },
+      "fragmentationRisk":    { "type": "string", "enum": ["none", "low", "medium", "high"] },
+      "sampleMergedRecord":   { "type": "object" },
+      "profileIntegrityScore":{ "type": "number", "minimum": 0, "maximum": 100 }
+    }
+  },
+
+  "metadata": {
+    "platform":     "Adobe Experience Platform",
+    "sprintContext": "Data Mapping with Intent — POC Day 2",
+    "designLead":   "Kelli Nordfelt",
+    "paradigm":     "Automated Data Orchestration. Human as approver, not operator.",
+    "note":         "This schema operates within and automates the AEP Source > Connection > Dataflow lineage model. It does not replace it."
+  }
+}
